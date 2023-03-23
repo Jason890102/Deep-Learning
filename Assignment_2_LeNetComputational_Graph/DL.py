@@ -1,3 +1,19 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+import pandas as pd
+import cv2
+import os
+import glob
+import time
+import shutil
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
+
+
+
+
+
 class DL:
     def __init__(self):
         return
@@ -48,7 +64,9 @@ class DL:
                     img = cv2.imread(images) # 圖片讀檔
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
-                    fd, hog_image = hog(img, orientations=9, pixels_per_cell=(8, 8),cells_per_block=(2, 2), visualize=True)
+                    fd, hog_image = hog(img, orientations=9,
+                                        pixels_per_cell=(8, 8),
+                                        cells_per_block=(2, 2), visualize=True)
                     train_images.append(hog_image)
 
             train_images = np.array(train_images)
@@ -93,7 +111,10 @@ class DL:
                     img = cv2.imread(images) # 圖片讀檔
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
-                    fd, hog_image = hog(img, orientations=9, pixels_per_cell=(8, 8),cells_per_block=(2, 2), visualize=True)
+                    fd, hog_image = hog(img, orientations=9,
+                                        pixels_per_cell=(8, 8),
+                                        cells_per_block=(2, 2),
+                                        visualize=True)
                     validation_images.append(hog_image)
 
             validation_images = np.array(validation_images)
@@ -136,7 +157,10 @@ class DL:
                     img = cv2.imread(images) # 圖片讀檔
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
-                    fd, hog_image = hog(img, orientations=9, pixels_per_cell=(8, 8),cells_per_block=(2, 2), visualize=True)
+                    fd, hog_image = hog(img, orientations=9,
+                                        pixels_per_cell=(8, 8),
+                                        cells_per_block=(2, 2),
+                                        visualize=True)
                     test_images.append(hog_image)
 
             test_images = np.array(test_images)
