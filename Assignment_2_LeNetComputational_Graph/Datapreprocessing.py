@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 import pandas as pd
 import cv2
 import os
@@ -13,8 +12,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 
 
-
-class DL:
+class Data:
     def __init__(self):
         return
     
@@ -48,7 +46,7 @@ class DL:
     
     def dataset_split(self, file):
         if file == 'train':
-            global  train_labels, d2_train_images
+            global  train_labels, train_images
             starttime = int(time.time())
             train_images = []
             image_list = os.listdir('train/')
@@ -56,26 +54,18 @@ class DL:
 
 
             for i in range(len(image_list)):
-                j = 0
+#                 j = 0
                 for images in glob.glob('train/' + image_list[i] + '/*'):
-                    j+=1
-                    if j == 121: # 只取前120張
-                        break
+#                     j+=1
+#                     if j == 121: # 只取前120張
+#                         break
                     img = cv2.imread(images) # 圖片讀檔
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
+#                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
-                    fd, hog_image = hog(img, orientations=9,
-                                        pixels_per_cell=(8, 8),
-                                        cells_per_block=(2, 2), visualize=True)
-                    train_images.append(hog_image)
+                    train_images.append(img)
 
             train_images = np.array(train_images)
-            print(train_images.shape)
-            nsamples, nx, ny = train_images.shape
-            d2_train_images = train_images.reshape((nsamples,nx*ny))
-            print(type(d2_train_images))
-            print(d2_train_images.shape)
-            print(d2_train_images)
+
 
 
             train_labels = []
@@ -83,25 +73,26 @@ class DL:
             image_list.sort(key = lambda x: int(x[5:]))
 
             for i in range(len(image_list)):
-                j = 0
+#                 j = 0
                 for labels in glob.glob('train/' + image_list[i] + '/*'):
-                    j+=1
-                    if j == 121:
-                        break
+#                     j+=1
+#                     if j == 121:
+#                         break
                     train_labels.append(i)
 
             train_labels = np.array(train_labels)
-            endtime = int(time.time())
-            print('花了',endtime-starttime,'s')
+            endtime = int(time.time()) # 計時結束
+            print("train_images:",train_images.shape)
+            print(type(train_images))
+            print("train_labels:",len(train_labels))
             print(type(train_labels))
-            print(len(train_labels))
-            print(train_labels)
+            print('花了',endtime-starttime,'s')
             
-            return train_labels, d2_train_images
+            return train_images, train_labels
             
         elif file == 'validation':
-            global validation_labels, d2_validation_images
-            starttime = int(time.time())
+            global validation_labels, validation_images
+            starttime = int(time.time()) # 計時開始
             validation_images = []
             image_list = os.listdir('validation/')
             image_list.sort(key = lambda x: int(x[10:]))
@@ -109,21 +100,12 @@ class DL:
             for i in range(len(image_list)):
                 for images in glob.glob('validation/' + image_list[i] + '/*'):
                     img = cv2.imread(images) # 圖片讀檔
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
+#                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
-                    fd, hog_image = hog(img, orientations=9,
-                                        pixels_per_cell=(8, 8),
-                                        cells_per_block=(2, 2),
-                                        visualize=True)
-                    validation_images.append(hog_image)
+                    validation_images.append(img)
 
             validation_images = np.array(validation_images)
-            print(validation_images.shape)
-            nsamples, nx, ny = validation_images.shape
-            d2_validation_images = validation_images.reshape((nsamples,nx*ny))
-            print(type(d2_validation_images))
-            print(d2_validation_images.shape)
-            print(d2_validation_images)
+
 
 
             validation_labels = []
@@ -137,17 +119,19 @@ class DL:
 
             validation_labels = np.array(validation_labels)
 
-            endtime = int(time.time())
+            endtime = int(time.time()) # 計時結束
+            print("validation_images:",validation_images.shape)
+            print(type(validation_images))
+            print("validation_labels:",len(validation_labels))
             print(type(validation_labels))
-            print(len(validation_labels))
-            print(validation_labels)
             print('花了',endtime-starttime,'s')
             
-            return validation_labels, d2_validation_images
+            return validation_images, validation_labels
             
         elif file == 'test':
-            global test_labels, d2_test_images
+            global test_labels, test_images
             starttime = int(time.time())
+            # images
             test_images = []
             image_list = os.listdir('test/')
             image_list.sort(key = lambda x: int(x[4:]))
@@ -155,23 +139,13 @@ class DL:
             for i in range(len(image_list)):
                 for images in glob.glob('test/' + image_list[i] + '/*'):
                     img = cv2.imread(images) # 圖片讀檔
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
+#                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
-                    fd, hog_image = hog(img, orientations=9,
-                                        pixels_per_cell=(8, 8),
-                                        cells_per_block=(2, 2),
-                                        visualize=True)
-                    test_images.append(hog_image)
+                    test_images.append(img)
 
             test_images = np.array(test_images)
-            print(test_images.shape)
-            nsamples, nx, ny = test_images.shape
-            d2_test_images = test_images.reshape((nsamples,nx*ny))
-            print(type(d2_test_images))
-            print(d2_test_images.shape)
-            print(d2_test_images)
 
-
+            # labels
             test_labels = []
             image_list = os.listdir('test/')
             image_list.sort(key = lambda x: int(x[4:]))
@@ -184,9 +158,10 @@ class DL:
             test_labels = np.array(test_labels)
             endtime = int(time.time())
 
+            print("test_images:",test_images.shape)
+            print(type(test_images))
+            print("test_labels:",len(test_labels))
             print(type(test_labels))
-            print(len(test_labels))
-            print(test_labels)
             print('花了',endtime-starttime,'s')
             
-            return test_labels, d2_test_images
+            return test_images, test_labels
