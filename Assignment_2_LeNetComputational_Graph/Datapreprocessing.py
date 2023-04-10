@@ -54,11 +54,11 @@ class Data:
 
 
             for i in range(len(image_list)):
-#                 j = 0
+                j = 0
                 for images in glob.glob('train/' + image_list[i] + '/*'):
-#                     j+=1
-#                     if j == 121: # 只取前120張
-#                         break
+                    j+=1
+                    if j == 121: # 只取前120張
+                        break
                     img = cv2.imread(images) # 圖片讀檔
 #                     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # 轉灰階
                     img = cv2.resize(img, (256, 256))
@@ -73,14 +73,14 @@ class Data:
             image_list.sort(key = lambda x: int(x[5:]))
 
             for i in range(len(image_list)):
-#                 j = 0
+                j = 0
                 for labels in glob.glob('train/' + image_list[i] + '/*'):
-#                     j+=1
-#                     if j == 121:
-#                         break
+                    j+=1
+                    if j == 121:
+                        break
                     train_labels.append(i)
-
             train_labels = np.array(train_labels)
+
             endtime = int(time.time()) # 計時結束
             print("train_images:",train_images.shape)
             print(type(train_images))
