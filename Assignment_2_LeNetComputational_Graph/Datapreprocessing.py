@@ -8,10 +8,6 @@ import time
 import shutil
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-
-
-
-
 class Data:
     def __init__(self):
         return

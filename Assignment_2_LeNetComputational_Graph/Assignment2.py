@@ -44,42 +44,32 @@ class Sigmoid():
     
     def backward(self, backout):
         X = self.cache
-        dX = backout * X * (1 - X) # Sigmoid backward
+        dX = backout * 1 / (1 + np.exp(-X)) * (1 - 1 / (1 + np.exp(-X))) # Sigmoid backward
         
         return dX
 
-class Softmax():
+class Swish():
     """
-    Softmax activation layer
+    Swish activation layer
+    x: input of shape(Samples, High, Width, Channel)
     """
+
     def __init__(self):
         self.cache = None
 
     def forward(self, X):
-        maxes = np.amax(X, axis = 1)
-        maxes = maxes.reshape(maxes.shape[0], 1)
-        Y = np.exp(X - maxes)
-        Z = Y / np.sum(Y, axis = 1).reshape(Y.shape[0], 1)
-        self.cache = (X, Y, Z)
+        out = 1 / (1 + np.exp(-X))
+        out = X * out
+        self.cache = X
 
-        return Z
+        return out
 
     def backward(self, backout):
-        X, Y, Z = self.cache
-        dZ = np.zeros(X.shape)
-        dY = np.zeros(X.shape)
-        dX = np.zeros(X.shape)
-        N = X.shape[0]
-        for n in range(Z):
-            i = np.argmax(Z[n])
-            dZ[n, :] = np.diag(Z[n]) - np.outer(Z[n], Z[n])
-            M = np.zeros((N, N))
-            M[:, i] = 1
-            dY[n, :] = np.eye(N) - M
-        dX = np.dot(backout, dZ)
-        dX = np.dot(dX, dY)
+        X = self.cache
+        dX = backout * 1 / (1 + np.exp(-X))  + X * 1 / (1 + np.exp(-X)) * (1 - 1 / (1 + np.exp(-X)))  # Sigmoid backward
 
         return dX
+
 
 class Softmax():
     """
@@ -89,15 +79,11 @@ class Softmax():
     def __init__(self):
         self.cache = None
 
-    def forward(self, X, improved):
+    def forward(self, X):
         maxes = np.amax(X, axis=1)
         maxes = maxes.reshape(maxes.shape[0], 1)
         Y = np.exp(X - maxes)
         Z = Y / np.sum(Y, axis=1).reshape(Y.shape[0], 1)
-        if improved == 'improved':
-            Z = X * Z
-        else:
-            pass
         self.cache = (X, Y, Z)
 
         return Z
@@ -134,20 +120,6 @@ def NLLLoss(Y_pred, Y_true):
 
     return loss/N
 
-class CrossEntropyLoss():
-    def __init__(self):
-        pass
-
-    def get(self, Y_pred, Y_true):
-        N = Y_pred.shape[0]
-        softmax = Softmax()
-        prod = softmax.forward(Y_pred)
-        loss = NLLLoss(prod, Y_true)
-        Y_serial = np.argmax(Y_true, axis = 1)
-        backout = prod.copy()
-        backout[np.arange(N), Y_serial] -= 1
-
-        return loss, backout
 
 class CrossEntropyLoss():
     def __init__(self):
@@ -249,6 +221,8 @@ class FC():
     def forward(self, X):
         S = X.shape[0]
         X_new = X.reshape(S, -1)
+        # print('X_new.shape',X_new.shape)
+        # print("self.W['val'].shape",self.W['val'].shape)
         out = np.dot(X_new, self.W['val']) + self.b['val']
         self.cache = X_new
         
@@ -257,7 +231,7 @@ class FC():
     def backward(self, backout): # 這部分不太了解
         X_new = self.cache
         dX = np.dot(backout, self.W['val'].T).reshape(X_new.shape)
-        self.W['grad'] = np.dot(X_new.reshape(X_new.reshape[0], np.prod(X_new.shape[1:])).T, backout)
+        self.W['grad'] = np.dot(X_new.reshape(X_new.shape[0], np.prod(X_new.shape[1:])).T, backout)
         self.b['grad'] = np.sum(backout, axis = 0)
         
         return dX
@@ -279,7 +253,7 @@ class Conv():
         self.Cin = Cin # 進入Convolutional layer的Channel數
         self.filter_numbers = filter_numbers # filter的數量，即為下一層Conv layer的的Cin
         self.S = stride # filter一次移動的格數
-        self.W = {'val': np.random.normal(0.0, np.sqrt(2/Cin), (filter_numbers, Cin, filter_size, filter_size)), # Xavier Initialization
+        self.W = {'val': np.random.normal(0.0, np.sqrt(2/Cin), (filter_numbers, filter_size, filter_size, Cin)), # Xavier Initialization
                   'grad': 0} # Convolutional layer的 Weight就是filter，可利用相同的filter使weight的parameters大幅降低
         self.b = {'val': np.random.randn(filter_numbers),
                   'grad': 0}
@@ -289,16 +263,16 @@ class Conv():
     def forward(self, X):
         X = np.pad(X, ((0, 0), (0, 0), (self.pad, self.pad), (self.pad, self.pad)), 'constant')
         (S, H, W, Cin) = X.shape # (Samples, Chennal, High, Width)
-        H_ = int((H - self.F)/self.S + 1) # 經過Convolutional運算後的High
-        W_ = int((W - self.F)/self.S + 1) # 經過Convolutional運算後的Width
+        H_ = round((H - self.F)/self.S) + 1 # 經過Convolutional運算後的High
+        W_ = round((W - self.F)/self.S) + 1 # 經過Convolutional運算後的Width
         Y = np.zeros((S, H_, W_, self.filter_numbers))
 
         for s in range(S):
-            for h in range(H_):
-                for w in range(W_):
-                    for c in range(self.filter_numbers):
-                        Y[s, h, w, c] = np.sum(X[s, h:h+self.F, w:w+self.F, :] * self.W['val'][c, :, :, :]) + self.b['val'][c]
-
+            for c in range(self.filter_numbers):
+                for h in range(H_):
+                    for w in range(W_):
+#                         Y[s, h, w, c] = np.sum(X[s, h:h+self.F, w:w+self.F, :] * self.W['val'][:, :, :, c]) + self.b['val'][c]
+                        Y[s, h, w, c] = np.sum((X[s, h:h+self.F, w:w+self.F, :] , self.W['val'][c, :, :, :])) + self.b['val'][c]
         self.cache = X
         return Y
 
@@ -307,8 +281,8 @@ class Conv():
         # W (filter_numbers, Cin, F, F)
         X = self.cache
         (S, H, W, Cin) = X.shape
-        H_ = (H - self.F)/self.S + 1
-        W_ = (W - self.F)/self.S + 1
+        H_ = round((H - self.F)/self.S + 1)
+        W_ = round((W - self.F)/self.S + 1)
         W_rot = np.rot90(np.rot90(self.W['val'])) # 將array逆時針旋轉90度
 
         dX = np.zeros(X.shape)
@@ -317,9 +291,9 @@ class Conv():
 
         # dW
         for fn in range(self.filter_numbers):
-            for h in range(self.F):
-                for w in range(self.F):
-                    for ci in range(Cin):
+            for ci in range(Cin):
+                for h in range(self.F):
+                    for w in range(self.F):
                         dW[fn, h, w, ci] = np.sum(X[:, h:h+H_, w:w+W_, ci] * backout[:, :, :, fn])
 
         # db
@@ -330,12 +304,12 @@ class Conv():
         #print("dout_pad.shape: " + str(dout_pad.shape))
         # dX
         for s in range(S):
-            for h in range(H):
-                for w in range(W):
-                    for ci in range(Cin):
+            for ci in range(Cin):
+                for h in range(H):
+                    for w in range(W):
                         #print("self.F.shape: %s", self.F)
                         #print("%s, W_rot[:,ci,:,:].shape: %s, dout_pad[n,:,h:h+self.F,w:w+self.F].shape: %s" % ((n,ci,h,w),W_rot[:,ci,:,:].shape, dout_pad[n,:,h:h+self.F,w:w+self.F].shape))
-                        dX[s, h, w, ci] = np.sum(W_rot[:, :, :, ci] * dout_pad[s, h:h+self.F, w:w+self.F, :])
+                        dX[s, h, w, ci] = np.sum(np.dot(W_rot[:, :, :, ci] , dout_pad[s, h:h+self.F, w:w+self.F, :]))
 
         return dX
 
@@ -347,32 +321,32 @@ class MaxPool():
 
     def forward(self, X):
         # X: (S, Cin, H, W): maxpool along 3rd, 4th dim
-        (S, Cin, H, W) = X.shape
+        (S, H, W, Cin) = X.shape
         F = self.F
         W_ = int(float(W)/F)
         H_ = int(float(H)/F)
-        Y = np.zeros((S, Cin, W_, H_))
+        Y = np.zeros((S, W_, H_, Cin))
         M = np.zeros(X.shape) # mask
         for s in range(S):
             for cin in range(Cin):
                 for w_ in range(W_):
                     for h_ in range(H_):
-                        Y[s, cin, w_, h_] = np.max(X[s, cin,F*w_:F*(w_+1), F*h_:F*(h_+1)])
-                        i, j = np.unravel_index(X[s, cin, F*w_:F*(w_+1), F*h_:F*(h_+1)].argmax(), (F, F))
-                        M[s, cin, F*w_+i, F*h_+j] = 1
+                        Y[s, w_, h_, cin] = np.max(X[s,F*w_:F*(w_+1), F*h_:F*(h_+1), cin])
+                        i, j = np.unravel_index(X[s, F*w_:F*(w_+1), F*h_:F*(h_+1), cin].argmax(), (F, F))
+                        M[s, F*w_+i, F*h_+j, cin] = 1
         self.cache = M
         return Y
 
     def backward(self, dout):
         M = self.cache
-        (N,Cin,H,W) = M.shape
+        (N,H,W,Cin) = M.shape
         dout = np.array(dout)
         #print("dout.shape: %s, M.shape: %s" % (dout.shape, M.shape))
         dX = np.zeros(M.shape)
         for n in range(N):
             for c in range(Cin):
                 #print("(n,c): (%s,%s)" % (n,c))
-                dX[n,c,:,:] = dout[n,c,:,:].repeat(2, axis=0).repeat(2, axis=1)
+                dX[n,:,:,c] = dout[n,:,:,c].repeat(2, axis=0).repeat(2, axis=1)
         return dX*M
 
 
@@ -431,7 +405,7 @@ class LeNet5(Net):
         return a5
 
     def backward(self, backout):
-        # dout = self.Softmax._backward(dout)
+        # backout = self.Softmax.backward(backout)
         backout = self.FC3.backward(backout)
         backout = self.ReLU4.backward(backout)
         backout = self.FC2.backward(backout)
@@ -458,62 +432,68 @@ class LeNet5_Im(Net):
     LeNet5_Improved
     """
     def __init__(self):
-        self.conv1 = Conv(filter_size=3, Cin=3, filter_numbers=6) # 256 - 2 = 254
-        self.ReLU1 = ReLu()
-        self.Maxpool1 = MaxPool(2,2) # 254 / 2 = 127
-        self.conv2 = Conv(filter_size=3, Cin=6, filter_numbers=16) # 127 - 2 = 125
-        self.ReLU2 = ReLu()
-        self.Maxpool2 = MaxPool(2,2) # 125 / 2 = 63
-        self.conv2 = Conv(filter_size=3, Cin=6, filter_numbers=26)  # 63 - 2 = 61
-        self.ReLU2 = ReLu()
-        self.Maxpool2 = MaxPool(2, 2) # 61 / 2 = 31
-        self.FC1 = FC(26*31*31, 1200)
-        self.ReLU3 = ReLu()
+        self.conv1 = Conv(filter_size=3, Cin=3, filter_numbers=6) # 254 - 2 = 252
+        self.Swish1 = Swish()
+        self.Maxpool1 = MaxPool(2,2) # 252 / 2 = 126
+        self.conv2 = Conv(filter_size=3, Cin=6, filter_numbers=16) # 126 - 2 = 124
+        self.Swish2 = Swish()
+        self.Maxpool2 = MaxPool(2,2) # 124 / 2 = 62
+        self.conv3 = Conv(filter_size=3, Cin=16, filter_numbers=26)  # 62 - 2 = 60
+        self.Swish3 = Swish()
+        self.Maxpool3 = MaxPool(2, 2) # 60 / 2 = 30
+        self.FC1 = FC(26*30*30, 1200)
+        self.Swish4 = Swish()
         self.FC2 = FC(1200, 840)
-        self.ReLU4 = ReLu()
+        self.Swish5 = Swish()
         self.FC3 = FC(840, 50)
         self.Softmax = Softmax() # 到這
 
-        self.p2_shape = None
+        self.p3_shape = None
 
     def forward(self, data):
         h1 = self.conv1.forward(data) # hidden layer
-        a1 = self.ReLU1.forward(h1) # activation layer
+        a1 = self.Swish1.forward(h1) # activation layer
         p1 = self.Maxpool1.forward(a1)
         h2 = self.conv2.forward(p1)
-        a2 = self.ReLU2.forward(h2)
+        a2 = self.Swish2.forward(h2)
         p2 = self.Maxpool2.forward(a2)
-        self.p2_shape = p2.shape
-        fl = p2.reshape(data.shape[0], -1)  # Flatten
+        h3 = self.conv3.forward(p2)
+        a3 = self.Swish3.forward(h3)
+        p3 = self.Maxpool3.forward(a3)
+        self.p3_shape = p3.shape
+        fl = p3.reshape(data.shape[0], -1)  # Flatten
         h3 = self.FC1.forward(fl)
-        a3 = self.ReLU3.forward(h3)
-        h4 = self.FC2.forward(a3)
-        a5 = self.ReLU4.forward(h4)
+        a4 = self.Swish4.forward(h3)
+        h4 = self.FC2.forward(a4)
+        a5 = self.Swish5.forward(h4)
         h5 = self.FC3.forward(a5)
-        a5 = self.Softmax.forward(h5, improved='improved') # 使用改進的Softmax
-        return a5
+        a6 = self.Softmax.forward(h5)
+        return a6
 
     def backward(self, backout):
-        # dout = self.Softmax._backward(dout)
+        # backout = self.Softmax.backward(backout)
         backout = self.FC3.backward(backout)
-        backout = self.ReLU4.backward(backout)
+        backout = self.Swish5.backward(backout)
         backout = self.FC2.backward(backout)
-        backout = self.ReLU3.backward(backout)
+        backout = self.Swish4.backward(backout)
         backout = self.FC1.backward(backout)
-        backout = backout.reshape(self.p2_shape)  # reshape
+        backout = backout.reshape(self.p3_shape)  # reshape
+        backout = self.Maxpool3.backward(backout)
+        backout = self.Swish3.backward(backout)
+        backout = self.conv3.backward(backout)
         backout = self.Maxpool2.backward(backout)
-        backout = self.ReLU2.backward(backout)
+        backout = self.Swish2.backward(backout)
         backout = self.conv2.backward(backout)
         backout = self.Maxpool1.backward(backout)
-        backout = self.ReLU1.backward(backout)
+        backout = self.Swish1.backward(backout)
         backout = self.conv1.backward(backout)
 
     def get_params(self):
-        return [self.conv1.W, self.conv1.b, self.conv2.W, self.conv2.b, self.FC1.W, self.FC1.b, self.FC2.W,
+        return [self.conv1.W, self.conv1.b, self.conv2.W, self.conv2.b, self.conv3.W, self.conv3.b, self.FC1.W, self.FC1.b, self.FC2.W,
                 self.FC2.b, self.FC3.W, self.FC3.b]
 
     def set_params(self, params):
-        [self.conv1.W, self.conv1.b, self.conv2.W, self.conv2.b, self.FC1.W, self.FC1.b, self.FC2.W, self.FC2.b,
+        [self.conv1.W, self.conv1.b, self.conv2.W, self.conv2.b, self.conv3.W, self.conv3.b, self.FC1.W, self.FC1.b, self.FC2.W, self.FC2.b,
          self.FC3.W, self.FC3.b] = params
 
 
@@ -532,6 +512,8 @@ def MakeOneHot(Y, D_out):
 
 def draw_losses(losses):
     t = np.arange(len(losses))
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
     plt.plot(t, losses)
     plt.show()
 

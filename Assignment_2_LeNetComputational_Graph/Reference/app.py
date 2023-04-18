@@ -75,7 +75,7 @@ class FC():
     def _backward(self, dout):
         #print("FC: _backward")
         X = self.cache
-        dX = np.dot(dout, self.W['val'].T).reshape(X.shape) # 看到這邊
+        dX = np.dot(dout, self.W['val'].T).reshape(X.shape)
         self.W['grad'] = np.dot(X.reshape(X.shape[0], np.prod(X.shape[1:])).T, dout)
         self.b['grad'] = np.sum(dout, axis=0)
         #self._update_params()
@@ -194,26 +194,26 @@ class Conv():
     """
     Conv layer
     """
-    def __init__(self, Filter_size, Cin, filter_numbers, stride=1, padding=0, bias=True):
-        self.F = Filter_size
+    def __init__(self, Cin, Cout, F, stride=1, padding=0, bias=True):
         self.Cin = Cin
-        self.filter_numbers = filter_numbers
+        self.Cout = Cout
+        self.F = F
         self.S = stride
         #self.W = {'val': np.random.randn(Cout, Cin, F, F), 'grad': 0}
-        self.W = {'val': np.random.normal(0.0,np.sqrt(2/Cin),(filter_numbers,Cin,F,F)), 'grad': 0} # Xavier Initialization
-        self.b = {'val': np.random.randn(filter_numbers), 'grad': 0}
+        self.W = {'val': np.random.normal(0.0,np.sqrt(2/Cin),(Cout,Cin,F,F)), 'grad': 0} # Xavier Initialization
+        self.b = {'val': np.random.randn(Cout), 'grad': 0}
         self.cache = None
         self.pad = padding
 
     def _forward(self, X):
         X = np.pad(X, ((0,0),(0,0),(self.pad,self.pad),(self.pad,self.pad)), 'constant')
         (N, Cin, H, W) = X.shape
-        H_ = (H - self.F)/self.S + 1
-        W_ = (W - self.F)/self.S + 1
-        Y = np.zeros((N, self.filter_numbers, H_, W_))
+        H_ = H - self.F + 1
+        W_ = W - self.F + 1
+        Y = np.zeros((N, self.Cout, H_, W_))
 
         for n in range(N):
-            for c in range(self.filter_numbers):
+            for c in range(self.Cout):
                 for h in range(H_):
                     for w in range(W_):
                         Y[n, c, h, w] = np.sum(X[n, :, h:h+self.F, w:w+self.F] * self.W['val'][c, :, :, :]) + self.b['val'][c]
