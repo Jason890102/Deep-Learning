@@ -383,7 +383,7 @@ class LeNet5(Net):
         self.FC2 = FC(1200, 840)
         self.ReLU4 = ReLu()
         self.FC3 = FC(840, 50)
-        self.Softmax = Softmax() # 到這
+        self.Softmax = Softmax()
 
         self.p2_shape = None
 
