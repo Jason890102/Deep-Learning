@@ -522,4 +522,3 @@ def get_batch(X, Y, batch_size):
     i = random.randint(1, N-batch_size)
     return X[i:i+batch_size], Y[i:i+batch_size]
 
-# def fit():
